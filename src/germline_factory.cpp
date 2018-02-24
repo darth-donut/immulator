@@ -17,8 +17,8 @@ immulator::GermlineFactory::operator()() const {
 //    } else {
 //
 //    }
-    return Germline(gcfg_.next_roll(), "", "");
-    //return germline_collection_[2];
+//    return Germline(gcfg_.next_roll(), "", "");
+    return germline_collection_[2];
 }
 
 void
