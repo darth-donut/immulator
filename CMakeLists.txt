@@ -5,5 +5,10 @@ set(EXE immulator)
 set(CMAKE_CXX_STANDARD 14)
 
 
-add_executable(${EXE} src/main.cpp src/germline.h src/germline_factory.cpp src/germline_factory.h)
+add_executable(${EXE}
+        src/main.cpp
+        src/germline.h
+        src/germline_factory.cpp
+        src/germline_factory.h
+        src/germline.cpp)
 

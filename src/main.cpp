@@ -1,6 +1,9 @@
 #include <iostream>
+#include "germline_factory.h"
 
 int main() {
-    std::cout << "Hello, World!" << std::endl;
+    immulator::GermlineFactory vgermlines("../tmp.txt");
+    std::cout << vgermlines().family_name() << std::endl;
+    std::cout << vgermlines().gene_name() << std::endl;
     return 0;
 }
