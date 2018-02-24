@@ -15,8 +15,8 @@ namespace immulator{
 
 class GermlineFactory {
 public:
-    GermlineFactory(const std::string &filename) :
-            filename_(filename) {
+    GermlineFactory(const std::string &filename, std::size_t seed=std::random_device{}()) :
+            filename_(filename), mersenne_(seed) {
         parse_file();
     }
     GermlineFactory(const std::string &filename, const immulator::GermlineConfiguration &gcfg) :
@@ -33,6 +33,7 @@ private:
     const std::string filename_;
     const immulator::GermlineConfiguration gcfg_;
     std::vector<immulator::Germline> germline_collection_;
+    mutable std::mt19937 mersenne_;
 };
 
 

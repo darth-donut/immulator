@@ -8,6 +8,9 @@
 
 #include <string>
 #include <iostream>
+#include <numeric>
+#include <algorithm>
+#include "immutils.h"
 
 
 namespace immulator {
@@ -19,11 +22,28 @@ friend void recombine(immulator::Germline &lhs, const immulator::Germline &rhs);
 public:
     Germline(const std::string& name, const std::string &ascnum, const std::string &seq) :
             name_(name), ascnum_(ascnum), seq_(seq) {}
+
     const std::string family_name() const {
-        return name_.substr(0, name_.find_first_of('-'));
+        if (name_.find(recombination_delim) == std::string::npos) {
+            return name_.substr(0, name_.find_first_of('-'));
+        } else {
+            auto tokens = immulator::split_string(name_, ",");
+            std::transform(tokens.begin(), tokens.end(), tokens.begin(), [] (auto &tok) {
+                return tok.substr(0, tok.find_first_of('-'));
+            });
+            return immulator::join_string(tokens.cbegin(), tokens.cend(), std::string(1, recombination_delim));
+        }
     }
     const std::string gene_name() const {
-        return name_.substr(0, name_.find_first_of('*'));
+        if (name_.find(recombination_delim) == std::string::npos) {
+            return name_.substr(0, name_.find_first_of('*'));
+        } else {
+            auto tokens = immulator::split_string(name_, ",");
+            std::transform(tokens.begin(), tokens.end(), tokens.begin(), [] (auto &tok) {
+                return tok.substr(0, tok.find_first_of('*'));
+            });
+            return immulator::join_string(tokens.cbegin(), tokens.cend(), std::string(1, recombination_delim));
+        }
     }
 
 
@@ -31,6 +51,7 @@ private:
     std::string seq_;
     std::string name_;
     std::string ascnum_;
+    static constexpr char recombination_delim = ',';
 };
 
 std::ostream

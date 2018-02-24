@@ -12,13 +12,14 @@ using immulator::Germline;
 
 Germline
 immulator::GermlineFactory::operator()() const {
-//    if (!gcfg_.next_roll().empty()) {
-//
-//    } else {
-//
-//    }
-//    return Germline(gcfg_.next_roll(), "", "");
-    return germline_collection_[2];
+    if (!gcfg_.next_roll().empty()) {
+        // todo
+    } else {
+        std::uniform_int_distribution<
+                std::vector<Germline>::size_type> dist(0, germline_collection_.size()-1);
+        std::vector<Germline>::size_type index = dist(mersenne_);
+        return germline_collection_[index];
+    }
 }
 
 void
