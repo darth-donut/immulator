@@ -12,13 +12,34 @@ using immulator::Germline;
 
 Germline
 immulator::GermlineFactory::operator()() const {
-    if (!gcfg_.next_roll().empty()) {
-        // todo
+    auto query = gcfg_.next_roll();
+    if (!query.empty()) {
+        std::vector<Germline> filtered_germlines;
+        std::copy_if(germline_collection_.begin(),
+                     germline_collection_.end(),
+                     std::back_inserter(filtered_germlines),
+                     [&query](const Germline &key) {
+                         if (query.find('*') != std::string::npos) {
+                             // user provided full (family-gene*allele)
+                             return key.name() == query;
+                         } else if (query.find('-') != std::string::npos) {
+                             // user provided gene (family-gene)
+                             return key.gene_name() == query;
+                         } else {
+                             // user provided family
+                             return key.family_name() == query;
+                         }
+                     });
+        if (filtered_germlines.empty()) {
+            return random_germline();
+        } else {
+            std::uniform_int_distribution<
+                    std::vector<Germline>::size_type> dist(0, filtered_germlines.size() - 1);
+            std::vector<Germline>::size_type index = dist(mersenne_);
+            return filtered_germlines[index];
+        }
     } else {
-        std::uniform_int_distribution<
-                std::vector<Germline>::size_type> dist(0, germline_collection_.size()-1);
-        std::vector<Germline>::size_type index = dist(mersenne_);
-        return germline_collection_[index];
+        return random_germline();
     }
 }
 
@@ -30,8 +51,7 @@ immulator::GermlineFactory::parse_file() {
         std::getline(ifs, buffer);
         while (!buffer.empty()) {
             // keep "getting" until we reach the first entry
-            while (buffer.find_first_of('>') != 0 && std::getline(ifs, buffer))
-                ;
+            while (buffer.find_first_of('>') != 0 && std::getline(ifs, buffer));
 
             auto tokens = immulator::split_string(buffer, "|");
             auto gene_name = tokens[1];
@@ -46,4 +66,12 @@ immulator::GermlineFactory::parse_file() {
             germline_collection_.emplace_back(std::move(gene_name), std::move(asc_name), std::move(sequence));
         }
     }
+}
+
+immulator::Germline
+immulator::GermlineFactory::random_germline() const {
+    std::uniform_int_distribution<
+            std::vector<Germline>::size_type> dist(0, germline_collection_.size() - 1);
+    std::vector<Germline>::size_type index = dist(mersenne_);
+    return germline_collection_[index];
 }

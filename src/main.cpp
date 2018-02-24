@@ -6,7 +6,7 @@ using std::string;
 
 int
 main() {
-    constexpr int seqs = 1'000'000;
+    constexpr int seqs = 1'000;
     immulator::GermlineConfiguration gcfg("../germ.cfg", true);
     const string title(80, '=');
     std::cout << title << '\n'

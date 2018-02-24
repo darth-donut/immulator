@@ -46,6 +46,10 @@ public:
         }
     }
 
+    const std::string name() const {
+        return seq_;
+    }
+
 
 private:
     std::string seq_;

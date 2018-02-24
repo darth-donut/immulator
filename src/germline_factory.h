@@ -29,6 +29,7 @@ public:
     immulator::Germline operator()() const;
 private:
     void parse_file();
+    immulator::Germline random_germline() const;
 private:
     const std::string filename_;
     const immulator::GermlineConfiguration gcfg_;
