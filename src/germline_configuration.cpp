@@ -4,6 +4,7 @@
 //
 
 #include <fstream>
+#include <vector>
 #include <string>
 #include <cassert>
 #include "germline_configuration.h"
