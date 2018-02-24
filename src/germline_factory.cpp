@@ -33,10 +33,9 @@ immulator::GermlineFactory::parse_file() {
             while (buffer.find_first_of('>') != 0 && std::getline(ifs, buffer))
                 ;
 
-            auto cache_pipe_pos = buffer.find_first_of('|');
-            auto gene_name = buffer.substr(cache_pipe_pos + 1,
-                                                  buffer.find_first_of('|', cache_pipe_pos + 1) - cache_pipe_pos - 1);
-            auto asc_name = buffer.substr(1, cache_pipe_pos - 1);
+            auto tokens = immulator::split_string(buffer, "|");
+            auto gene_name = tokens[1];
+            auto asc_name = tokens[0].substr(1);
 
             // keep "getting" until we reach the next entry
             std::getline(ifs, buffer);

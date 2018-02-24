@@ -20,7 +20,7 @@ immulator::GermlineConfiguration::parse_file(bool percentage) {
     string buffer;
     if (ifs) {
         while (getline(ifs, buffer)) {
-            string germ_name = strip_ws(buffer.substr(0, buffer.find_first_of(',')));
+            string germ_name = strip_string(buffer.substr(0, buffer.find_first_of(',')), " ");
             double prob = 1 - (stod(buffer.substr(buffer.find_first_of(',') + 1)) / (percentage ? 100 : 1));
             germline_distribution_.insert(std::make_pair(prob, germ_name));
         }

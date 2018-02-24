@@ -11,16 +11,16 @@
 #include <vector>
 
 namespace immulator {
-inline std::string strip_ws(const std::string &str);
+inline std::string strip_string(const std::string &str, const std::string &delim);
 inline std::vector<std::string> split_string(const std::string &str, const std::string &delim);
 template<typename In> inline std::string join_string(const In &begin, const In &end, const std::string &delim);
 
 std::string
-strip_ws(const std::string &str) {
-    std::string left_strip = str.substr(str.find_first_not_of(' '));
+strip_string(const std::string &str, const std::string &delim) {
+    std::string left_strip = str.substr(str.find_first_not_of(delim));
     std::string rstring(left_strip.rbegin(), left_strip.rend());
     if (rstring.find_first_of(' ') != std::string::npos) {
-        return left_strip.substr(left_strip.size() - rstring.find_first_of(' '));
+        return left_strip.substr(left_strip.size() - rstring.find_first_of(delim));
     } else {
         return left_strip;
     }
