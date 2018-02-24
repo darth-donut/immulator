@@ -7,16 +7,32 @@
 #define IMMULATOR_GERMLINE_FACTORY_H
 
 #include <string>
+#include <vector>
+#include "germline.h"
+#include "germline_configuration.h"
 
 namespace immulator{
 
 class GermlineFactory {
 public:
-    GermlineFactory(const std::string &filename) { }
+    GermlineFactory(const std::string &filename) :
+            filename_(filename) {
+        parse_file();
+    }
+    GermlineFactory(const std::string &filename, const immulator::GermlineConfiguration &gcfg) :
+            filename_(filename), gcfg_(gcfg) {
+        parse_file();
+    }
 
-
+    /// returns a random germline
+    /// \return Germline object
+    immulator::Germline operator()() const;
+private:
+    void parse_file();
 private:
     const std::string filename_;
+    const immulator::GermlineConfiguration gcfg_;
+    std::vector<immulator::Germline> germline_collection_;
 };
 
 
