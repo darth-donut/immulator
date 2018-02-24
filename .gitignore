@@ -108,3 +108,10 @@ Session.vim
 *~
 # Auto-generated tag files
 tags
+
+
+
+# Project related files
+*.cfg
+germ.txt
+tmp.txt

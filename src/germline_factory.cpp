@@ -12,7 +12,13 @@ using immulator::Germline;
 
 Germline
 immulator::GermlineFactory::operator()() const {
-    return germline_collection_[2];
+//    if (!gcfg_.next_roll().empty()) {
+//
+//    } else {
+//
+//    }
+    return Germline(gcfg_.next_roll(), "", "");
+    //return germline_collection_[2];
 }
 
 void

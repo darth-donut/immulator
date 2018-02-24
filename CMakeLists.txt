@@ -10,5 +10,5 @@ add_executable(${EXE}
         src/germline.h
         src/germline_factory.cpp
         src/germline_factory.h
-        src/germline.cpp)
+        src/germline.cpp src/germline_configuration.cpp src/germline_configuration.h src/immutils.h)
 

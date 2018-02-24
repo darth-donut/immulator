@@ -24,10 +24,11 @@ struct Germline {
     const std::string ascnum_;
 };
 
-}
-
 std::ostream
 &operator<<(std::ostream &os, const immulator::Germline &germ);
+
+}
+
 
 
 #endif //IMMULATOR_GERMLINE_H
