@@ -18,10 +18,17 @@ namespace immulator {
 class Germline {
 friend std::ostream &operator<<(std::ostream &os, const immulator::Germline &germ);
 friend Germline operator+(Germline lhs, const Germline& rhs);
-friend void recombine(immulator::Germline &lhs, const immulator::Germline &rhs);
 public:
     Germline(const std::string& name, const std::string &ascnum, const std::string &seq) :
             name_(name), ascnum_(ascnum), seq_(seq) {}
+
+    Germline &operator+=(const Germline &other) {
+        name_ += immulator::Germline::recombination_delim + other.name_;
+        ascnum_ += immulator::Germline::recombination_delim + other.ascnum_;
+        seq_ += other.seq_;
+        return *this;
+    }
+public:
 
     const std::string family_name() const {
         if (name_.find(recombination_delim) == std::string::npos) {
@@ -49,7 +56,6 @@ public:
     const std::string name() const {
         return seq_;
     }
-
 
 private:
     std::string seq_;

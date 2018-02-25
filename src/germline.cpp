@@ -15,16 +15,9 @@ std::ostream
 
 immulator::Germline
 operator+(immulator::Germline lhs, const immulator::Germline &rhs) {
-    lhs.name_ += immulator::Germline::recombination_delim + rhs.name_;
-    lhs.ascnum_ += immulator::Germline::recombination_delim + rhs.ascnum_;
-    recombine(lhs, rhs);
-    return lhs;
+    return lhs += rhs;
 }
 
-void
-recombine(immulator::Germline &lhs, const immulator::Germline &rhs) {
-    lhs.seq_ += rhs.seq_;
-}
 
 }
 
