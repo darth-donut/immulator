@@ -34,7 +34,7 @@ public:
         if (name_.find(recombination_delim) == std::string::npos) {
             return name_.substr(0, name_.find_first_of('-'));
         } else {
-            auto tokens = immulator::split_string(name_, ",");
+            auto tokens = immulator::split_string(name_, std::string(1, recombination_delim));
             std::transform(tokens.begin(), tokens.end(), tokens.begin(), [] (auto &tok) {
                 return tok.substr(0, tok.find_first_of('-'));
             });
@@ -45,7 +45,7 @@ public:
         if (name_.find(recombination_delim) == std::string::npos) {
             return name_.substr(0, name_.find_first_of('*'));
         } else {
-            auto tokens = immulator::split_string(name_, ",");
+            auto tokens = immulator::split_string(name_, std::string(1, recombination_delim));
             std::transform(tokens.begin(), tokens.end(), tokens.begin(), [] (auto &tok) {
                 return tok.substr(0, tok.find_first_of('*'));
             });
@@ -54,7 +54,7 @@ public:
     }
 
     const std::string name() const {
-        return seq_;
+        return name_;
     }
 
 private:
