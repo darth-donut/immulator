@@ -1,12 +1,15 @@
 #include <iostream>
 #include <string>
 #include "germline_factory.h"
+#include <random>
 
 using std::string;
 
 int
 main() {
     constexpr int seqs = 1'000;
+    std::mt19937 mersenne(std::random_device{}());
+
     immulator::GermlineConfiguration gcfg("../germ.cfg", true);
     const string title(80, '=');
     std::cout << title << '\n'
@@ -15,10 +18,10 @@ main() {
     immulator::GermlineFactory vgermlines("../tmp.txt", gcfg);
     std::map<std::string, int> counter;
     for (int i = 0; i < seqs; i++) {
-        counter[vgermlines().family_name()] += 1;
+        counter[vgermlines(mersenne).family_name()] += 1;
     }
 
-    std::cout << "\nTesting recombination dummy: " << (vgermlines() + vgermlines()) << std::endl;
+    std::cout << "\nTesting recombination dummy: " << (vgermlines(mersenne) + vgermlines(mersenne)) << std::endl;
 
     // count germline distribution used
     double total = std::accumulate(counter.begin(), counter.end(), 0, [] (auto val, auto &keypair) {
