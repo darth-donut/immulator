@@ -25,7 +25,6 @@ immulator::GermlineFactory::parse_file() {
             auto asc_name = tokens[0].substr(1);
 
             // keep "getting" until we reach the next entry
-            std::getline(ifs, buffer);
             std::string sequence;
             while (std::getline(ifs, buffer) && buffer.find_first_of('>') != 0) {
                 sequence += buffer;
