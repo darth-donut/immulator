@@ -23,6 +23,8 @@ class Germline {
 public:
     using size_type = std::string::size_type;
 
+    Germline() = default;
+
     Germline(const std::string &name, const std::string &ascnum, const std::string &seq) :
             name_(name), ascnum_(ascnum), seq_(seq) {}
 
@@ -36,6 +38,8 @@ public:
     char &operator[](size_type index) { return seq_[index]; }
 
     const char &operator[](size_type index) const { return seq_[index]; }
+
+    operator std::string() const { return seq_; }
 
 public:
 
@@ -79,8 +83,9 @@ public:
     /// Performs an in-place substr
     /// \param start start index to perform trimmming
     /// \param ncount trim ncount bases starting from starting index
-    void trim(size_type start = 0, size_type ncount = std::string::npos) {
+    Germline &trim(size_type start = 0, size_type ncount = std::string::npos) {
         seq_ = seq_.substr(start, ncount);
+        return *this;
     }
 
     size_type size() const { return seq_.size(); }
