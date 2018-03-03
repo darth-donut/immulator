@@ -139,11 +139,23 @@ public:
         return b_;
     }
 
-    T value() const {
+    const T &value() const {
         return **this;
     }
 
-    T value_or(const T& other) const {
+    T &value() {
+        return **this;
+    }
+
+    const T &value_or(const T& other) const {
+        if (this->has_value()) {
+            return **this;
+        } else {
+            return other;
+        }
+    }
+
+    T &value_or(const T& other) {
         if (this->has_value()) {
             return **this;
         } else {
