@@ -114,4 +114,6 @@ tags
 # Project related files
 *.cfg
 germ.txt
-tmp.txt
+vgerm.txt
+dgerm.txt
+jgerm.txt
