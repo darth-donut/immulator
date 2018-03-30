@@ -249,7 +249,7 @@ local_align(const std::string &string1, const std::string &string2, double ins, 
 //            re_string1 += string1[j-1];
             --j;
         } else if (double_eq(val, matrix[i - 1][j - 1] + scoring_matrix[string1[j - 1]][string2[i - 1]])) {
-//            re_string2 += string1[j-1];
+//            re_string2 += string2[i-1];
 //            re_string1 += string1[j-1];
             --i, --j;
         } else {
@@ -263,7 +263,7 @@ local_align(const std::string &string1, const std::string &string2, double ins, 
 //            if (re_string1.size() < re_string2.size()) {
 //                re_string1 += std::string(re_string2.size() - re_string1.size(), '-');
 //            } else {
-//                re_string2 += std::sring(re_string1.size() - re_string2.size(), '-');
+//                re_string2 += std::string(re_string1.size() - re_string2.size(), '-');
 //            }
             return std::make_tuple(max_val, std::max(i, j), std::max(best_index.first, best_index.second)
                     /*, re_string1, re_string2*/);
