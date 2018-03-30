@@ -39,7 +39,7 @@ public:
 
     const char &operator[](size_type index) const { return seq_[index]; }
 
-    operator std::string() const { return seq_; }
+    operator std::string() const { return seq_; } // NOLINT
 
 public:
 

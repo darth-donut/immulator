@@ -76,7 +76,7 @@ vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &
         bool d_prod;
         std::tie(d, dsize, d_prod) = dcutter(dgerm,
                                              mersenne,
-                                             // todo:: insertion here!
+                // todo:: insertion here!
                                              v->first.substr(v->first.size() - (v->first.size() % 3)),
                                              prod);
         if (d_prod) {
@@ -125,7 +125,7 @@ vcutter(Germline vgerm, Gen &generator) {
         size_type nt_rem = vgerm.size() - (nuc_index + 3) - 1;
 
         // we can cut anywhere between 0 - nt_rem nucleotides
-        std::uniform_int_distribution<int> idist(0, nt_rem);
+        std::uniform_int_distribution<size_t> idist(0, nt_rem);
         size_type final_length = vgerm.size() - idist(generator);
         return std::make_pair(vgerm.trim(0, final_length), nuc_index);
     }
@@ -145,11 +145,11 @@ dcutter(Germline dgerm, Gen &generator, const std::string &rem, bool check) {
      * ---------------------------------------------------------------------------- */
     constexpr double FRONT_CUT_PERC = 30.0 / 100;
 
-    auto max_front_cut_size = static_cast<int>(std::ceil(FRONT_CUT_PERC * dgerm.size()));
-    std::uniform_int_distribution<int> front_idist(0, max_front_cut_size);
+    auto max_front_cut_size = static_cast<size_t>(std::ceil(FRONT_CUT_PERC * dgerm.size()));
+    std::uniform_int_distribution<size_t> front_idist(0, max_front_cut_size);
 
     // cut front of D gene by "front_cut" much
-    int front_cut = front_idist(generator);
+    auto front_cut = front_idist(generator);
     if (check) {
         auto aa = immulator::translate(rem + dgerm.substr(front_cut));
         std::size_t attempt = 0;
@@ -170,11 +170,11 @@ dcutter(Germline dgerm, Gen &generator, const std::string &rem, bool check) {
      * ---------------------------------------------------------------------------- */
 
     constexpr double BACK_CUT_PERC = 30.0 / 100;
-    auto max_back_cut_size = static_cast<int>(std::ceil(BACK_CUT_PERC * dgerm.size()));
-    std::uniform_int_distribution<int> back_idist(0, max_back_cut_size);
+    auto max_back_cut_size = static_cast<size_t>(std::ceil(BACK_CUT_PERC * dgerm.size()));
+    std::uniform_int_distribution<size_t> back_idist(0, max_back_cut_size);
 
     // cut back of D gene by "back_cut" much
-    int back_cut = front_idist(generator);
+    auto back_cut = front_idist(generator);
     return std::make_tuple(dgerm.trim(front_cut, dgerm.size() - back_cut - front_cut),
                            dgerm.size() - front_cut - back_cut,
                            productive);
@@ -188,9 +188,24 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem, bool check) {
 
     bool productive = true;
 
-//    FR4_CONSENSUS = {'hv':"WGQGTXVTVSS", 'kv':'FGGGTQ', 'lv':'FGGGTQ'}
-//    FR4_CONSENSUS_DNA = {'hv':"TGGGGCCAGGGCACCNNNGTGACCGTGAGCAGC",
-//    'kv':'TTCGGCGGCGGCACCCAG', 'lv':'TTCGGCGGCGGCACCCAG'}
+    static std::unordered_map<std::string, std::unordered_map<std::string, std::string>> FR4_CONSENSUS_AA = {
+            {
+                    "H.SAPIENS", {
+                                         {"hv", "WGQGTXVTVSS"},
+                                         {"kv", "FGXGTKLEIK"},
+                                         {"lv", "FGXGTKLTVL"}
+                                 }
+            },
+    };
+    static std::unordered_map<std::string, std::unordered_map<std::string, std::string>> FR4_CONSENSUS_DNA = {
+            {
+                    "H.SAPIENS", {
+                                         {"hv", "TGGGGCCAGGGCACCNNNGTGACCGTGAGCAGC"},
+                                         {"kv", "TTTGGCCAGGGGACCAAGCTGGAGATCAAA"},
+                                         {"lv", "TTCGGCGGAGGGACCAAGCTGACCGTCCTA"}
+                                 }
+            },
+    };
 
     /* ------------------------------------------------------------------------------ *
      *                          Find consensus FR4 [FW]G.G                            *
@@ -198,38 +213,11 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem, bool check) {
      * ------------------------------------------------------------------------------ */
 
     // first, find all the matching positions of this pattern
-    const std::regex CONSERVED_PTN(R"([FW]G.G)");
-    std::smatch match;
-    std::vector<std::string::size_type> match_indices;
     auto jaa = immulator::translate(jgerm);
-    if (std::regex_search(jaa, match, CONSERVED_PTN)) {
-        for (auto i = 0; i < match.size(); ++i) {
-            match_indices.push_back(match.position(i) * 3);
-        }
-    } else {
-        // can't find a consensus!
-        std::cerr << "J gene" << jaa << "\n\t has no consensus fwgxg\n";
-        return {};
-    }
-
-    // next, get the first of that, and generate a cut value based on a uniform int dist
-    std::uniform_int_distribution<> idist(0, match_indices.front());
-    int front_cut = idist(generator);
-    if (check) {
-        auto aa = immulator::translate(rem + jgerm.substr(front_cut));
-        std::size_t attempt = 0;
-        for (; attempt < MAX_ATTEMPTS && aa.find('*') != std::string::npos; ++attempt) {
-            front_cut = idist(generator);
-            aa = immulator::translate(rem + jgerm.substr(front_cut));
-        }
-        if (attempt == MAX_ATTEMPTS) {
-            std::cerr << "WARNING: Tried too hard, but in the end, nothing matters.\n";
-            productive = false;
-        }
-    }
-
-    return std::make_tuple(jgerm.trim(front_cut), match_indices.front(), productive);
+    std::unordered_map<char, std::unordered_map<char, double>> scoring_matrix = {
+            {'F', {{'W', 32}, {'X', 2}, {}}},
+            {/* ... */}
+    };
+    auto res = immulator::local_align(jaa, FR4_CONSENSUS_AA["H.SAPIENS"]["hv"], -5, -5, scoring_matrix);
 }
-
-
 
