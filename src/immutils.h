@@ -40,7 +40,7 @@ const T &max(const T &x, const T &x1, Args... xs);
 inline bool double_eq(double d1, double d2, double epsilon = 1e-5);
 
 inline void print_alignment(const std::string &string1, const std::string &string2, std::string::size_type start,
-                            std::string::size_type end, double score, std::ostream &os);
+                            std::string::size_type end, double score, std::ostream &os = std::cout);
 
 std::string
 strip_string(const std::string &str, const std::string &delim) {
