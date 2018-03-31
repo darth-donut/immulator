@@ -322,7 +322,7 @@ print_alignment(const std::string &string1, const std::string &string2, std::str
                 std::string::size_type end, double score, std::ostream &os) {
     os << "Alignment score: " << score << '\n'
        << string1 << '\n'
-       << std::string(start, ' ') << std::string(end - start + 1, '|') << '\n'
+       << std::string(start, ' ') << std::string(end - start, '|') << '\n'
        << string2 << '\n';
 }
 
