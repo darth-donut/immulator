@@ -298,13 +298,27 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem, bool check, bool
 
     // try getting AA position first
     std::string::size_type start, end;
-    std::tie(std::ignore, start, end) = immulator::local_align(jaa, FR4_CONSENSUS_AA["H.SAPIENS"]["hv"], -5, -5,
-                                                               scoring_matrix);
+    size_type orf = 0, used_orf = 0;
+    double best_score = 0;
+
+    for (; orf < 3; ++orf) {
+        double score;
+        std::string::size_type current_start, current_end;
+        std::tie(score, current_start, current_end) = immulator::local_align(jaa, FR4_CONSENSUS_AA["H.SAPIENS"]["hv"],
+                                                                             -5, -5,
+                                                                             scoring_matrix);
+        if (score > best_score) {
+            start = current_start;
+            end = current_end;
+            best_score = score;
+            used_orf = orf;
+        }
+        jaa = immulator::translate(jgerm.substr(orf + 1));
+    }
     if (start < end) {
         // convert to NT start position
-        start *= 3;
-        end *= 3;
-        std::cerr << "AMINO DISCOVERY: " << start << std::endl;
+        start = start * 3 + used_orf;
+        end = end * 3 + used_orf;
     } else {
         // try AA position
         static constexpr double NT_MATCH = 5;
@@ -322,7 +336,6 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem, bool check, bool
             std::cerr << "Tried nucleotide consensus FR4 region with no luck\n";
             return {};
         }
-        std::cerr << "NT SE DISCOVERY: " << start << std::endl;
     }
 
     /* -------------------------------------------------------------------------------- *
