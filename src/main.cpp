@@ -13,8 +13,9 @@ using std::string;
 using immulator::Germline;
 
 // Testing
-Germline vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &jgerm, bool prod = true,
-                           bool multiple = true);
+immulator::optional<Germline>
+vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &jgerm, bool prod = true,
+                   bool multiple = true);
 
 template<typename Gen>
 immulator::optional<std::pair<Germline, immulator::Germline::size_type>> vcutter(Germline vgerm, Gen &generator);
@@ -47,9 +48,13 @@ main() {
         counter[vgermlines(mersenne).family_name()] += 1;
     }
 
-    std::cout << "\nTesting recombination dummy: "
-              << vdj_recombination(vgermlines(mersenne), dgermlines(mersenne), jgermlines(mersenne))
-              << std::endl;
+    for (auto i = 0; i < seqs; ++i) {
+        immulator::optional<Germline> recombined;
+        do {
+            recombined = vdj_recombination(vgermlines(mersenne), dgermlines(mersenne), jgermlines(mersenne));
+        } while (!recombined);
+        std::cout << *recombined << std::endl;
+    }
 
     // count germline distribution used
     double total = std::accumulate(counter.begin(), counter.end(), 0, [](auto val, auto &keypair) {
@@ -67,46 +72,52 @@ main() {
 
 
 // Testing
-Germline
+immulator::optional<Germline>
 vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &jgerm, bool prod, bool multiple) {
     using size_type = immulator::Germline::size_type;
     static std::mt19937 mersenne(std::random_device{}());
+    static constexpr std::size_t MAX_ATTEMPTS = 100'000;
+
     auto v = vcutter(vgerm, mersenne);
+
     if (v) {
-        // todo:: V - D INSERTION, D-J insertion
+        bool d_prod = false;
         Germline d;
         size_type dsize;
-        bool d_prod;
         // starts AFTER Cys (and convert to 1-index)
         size_type cdr3_start_pos = v->second + 3 + 1;
-        std::tie(d, dsize, d_prod) = dcutter(dgerm,
-                                             mersenne,
-                // todo:: insertion here!
-                                             v->first.substr(v->first.size() - (v->first.size() % 3)),
-                                             prod);
-        if (d_prod) {
-            Germline j;
-            size_type fwgxg_conserved_index;
-            bool j_prod;
-            // todo:: insertion between D-J instead of just D
-            auto jtry = jcutter(jgerm, mersenne, d.substr(d.size() - (v->first.size() + d.size()) % 3), prod, multiple);
-            if (jtry) {
+        std::size_t attempt_d = 0;
+        do {
+            std::tie(d, dsize, d_prod) = dcutter(dgerm,
+                                                 mersenne,
+                                                 v->first.substr(v->first.size() - (v->first.size() % 3)),
+                                                 prod);
+            ++attempt_d;
+        } while (!d_prod && prod && attempt_d < MAX_ATTEMPTS);
+
+        Germline j;
+        size_type fwgxg_conserved_index;
+        std::size_t attempt_j = 0;
+        auto jtry = jcutter(jgerm, mersenne, d.substr(d.size() - (v->first.size() + d.size()) % 3), prod, multiple);
+
+        if (jtry) {
+            bool j_prod = false;
+            do {
                 std::tie(j, fwgxg_conserved_index, j_prod) = *jtry;
-                size_type cdr3_end_pos = v->first.size() + d.size() + fwgxg_conserved_index;
-                std::cerr << "fwgxg index " << fwgxg_conserved_index << std::endl;
-                std::cerr << "CDR3 start: " << cdr3_start_pos << " CDR3 END: " << cdr3_end_pos << std::endl;
-                return (v->first + d + j);
-            } else {
-                std::cerr << "J gene failed to find consensus [FW]GXG region\n";
-            }
+                ++attempt_j;
+            } while (!j_prod && prod && attempt_j < MAX_ATTEMPTS);
+            size_type cdr3_end_pos = v->first.size() + d.size() + fwgxg_conserved_index;
+            std::cerr << "CDR3 start: " << cdr3_start_pos << " CDR3 END: " << cdr3_end_pos << std::endl;
+            return (v->first + d + j);
         } else {
-            std::cerr << "D gene failed to be found" << std::endl;
+            // fail to find J gene anchor [FW]G.G region
+            return {};
         }
+
     } else {
-        // todo
-        std::cerr << "V gene failed to find consensus Cys aa\n";
+        // fail to find anchor Cys region
+        return {};
     }
-    return vgerm + dgerm + jgerm;
 }
 
 ///
@@ -121,11 +132,10 @@ vcutter(Germline vgerm, Gen &generator) {
     auto aa = immulator::translate(vgerm);
     size_type cys;
     if ((cys = aa.find_last_of('C')) == std::string::npos) {
-        std::cerr << "WARNING: Cys consensus failed to be located in:\n"
+        std::cerr << "WARNING: Cys anchor failed to be located in:\n"
                   << "\t" << vgerm << '\n';
         return {};
     } else {
-//        std::cerr << "DEBUG: " << "Cys found at index " << cys << std::endl;
         size_type nuc_index = cys * 3;
 
         // remaining nucleotides that we can cut
