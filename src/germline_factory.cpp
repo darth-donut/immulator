@@ -10,17 +10,6 @@
 using immulator::Germline;
 
 
-Germline
-immulator::GermlineFactory::operator()() const {
-//    if (!gcfg_.next_roll().empty()) {
-//
-//    } else {
-//
-//    }
-    return Germline(gcfg_.next_roll(), "", "");
-    //return germline_collection_[2];
-}
-
 void
 immulator::GermlineFactory::parse_file() {
     std::ifstream ifs(filename_);
@@ -29,16 +18,13 @@ immulator::GermlineFactory::parse_file() {
         std::getline(ifs, buffer);
         while (!buffer.empty()) {
             // keep "getting" until we reach the first entry
-            while (buffer.find_first_of('>') != 0 && std::getline(ifs, buffer))
-                ;
+            while (buffer.find_first_of('>') != 0 && std::getline(ifs, buffer));
 
-            auto cache_pipe_pos = buffer.find_first_of('|');
-            auto gene_name = buffer.substr(cache_pipe_pos + 1,
-                                                  buffer.find_first_of('|', cache_pipe_pos + 1) - cache_pipe_pos - 1);
-            auto asc_name = buffer.substr(1, cache_pipe_pos - 1);
+            auto tokens = immulator::split_string(buffer, "|");
+            auto gene_name = tokens[1];
+            auto asc_name = tokens[0].substr(1);
 
             // keep "getting" until we reach the next entry
-            std::getline(ifs, buffer);
             std::string sequence;
             while (std::getline(ifs, buffer) && buffer.find_first_of('>') != 0) {
                 sequence += buffer;
