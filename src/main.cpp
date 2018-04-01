@@ -15,7 +15,7 @@ using immulator::Germline;
 // Testing
 immulator::optional<Germline>
 vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &jgerm, bool prod = true,
-                   bool multiple = true);
+                  bool multiple = true);
 
 template<typename Gen>
 immulator::optional<std::pair<Germline, immulator::Germline::size_type>> vcutter(Germline vgerm, Gen &generator);
@@ -28,10 +28,20 @@ template<typename Gen>
 immulator::optional<std::tuple<Germline, immulator::Germline::size_type, bool>>
 jcutter(Germline jgerm, Gen &generator, const std::string &rem, bool check = true, bool multiple = true);
 
+template<typename Gen>
+immulator::optional<std::string>
+palindromic(std::string::size_type n, Gen &generator, const std::string &rem, bool productive = true);
+
+template<typename Gen>
+std::string
+random_nts(std::string::size_type n, Gen &generator, const std::string &rem, bool productive = true);
+
 int
 main() {
     constexpr int seqs = 1'000;
-    std::mt19937 mersenne(std::random_device{}());
+    auto seed = std::random_device{}();
+    std::cerr << "This simulation run is generated with seed " << seed << std::endl;
+    std::mt19937 mersenne(seed);
 
     immulator::GermlineConfiguration gcfg("../germ.cfg", true);
     const string title(80, '=');
@@ -387,5 +397,108 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem, bool check, bool
     assert(front_cut <= start);
     return std::make_tuple(jgerm.trim(front_cut, jgerm.size() - back_cut - front_cut), start - front_cut, productive);
 }
+
+template<typename Gen>
+immulator::optional<std::string>
+palindromic(std::string::size_type n, Gen &generator, const std::string &rem, bool productive) {
+    assert(rem.size() <= 2);
+    constexpr static char NTS[] = {'A', 'C', 'G', 'T'};
+    constexpr static std::size_t MAX_ATTEMPTS = 100'000;
+    static std::unordered_map<char, char> COMPLEMENT_NT = {
+            {'A', 'T'}, {'T', 'A'}, {'C', 'G'}, {'G', 'C'}
+    };
+    std::string nt_seq;
+
+    if (!productive) {
+        std::uniform_int_distribution<std::string::size_type> idist(0, 3);      // 0 to len(NTS) - 1
+        // first half
+        for (auto i = 0; i < n / 2; ++i) {
+            nt_seq.push_back(NTS[idist(generator)]);
+        }
+
+        // the middle nucleotide (if n is odd)
+        if (n % 2) {
+            nt_seq.push_back(NTS[idist(generator)]);
+        }
+
+        // the remaining (second) half
+        for (auto i = 0; i < n / 2; ++i) {
+            nt_seq.push_back(COMPLEMENT_NT[nt_seq[n / 2 - i - 1]]);
+        }
+        return immulator::join_string(nt_seq.cbegin(), nt_seq.cend(), "");
+    } else {
+        bool is_productive = false;
+        std::size_t attempts = 0;
+        std::string aa_seq;
+        do {
+            std::string current_codon = rem;
+            nt_seq.clear();
+            // first half
+            for (auto i = 0; i < n / 2; ++i) {
+                auto allowed_nt = immulator::allowed_nts(current_codon);
+                std::uniform_int_distribution<std::string::size_type> idist(0, allowed_nt.size() - 1);
+                char nt = allowed_nt[idist(generator)];
+                nt_seq.push_back(nt);
+                current_codon += nt;
+                current_codon = current_codon.size() == 3 ? "" : current_codon;
+            }
+
+            // middle nucleotide (when n is odd)
+            if (n % 2) {
+                auto allowed_nt = immulator::allowed_nts(current_codon);
+                std::uniform_int_distribution<std::string::size_type> idist(0, allowed_nt.size() - 1);
+                char nt = allowed_nt[idist(generator)];
+                nt_seq.push_back(nt);
+                current_codon += nt;
+                current_codon = current_codon.size() == 3 ? "" : current_codon;
+            }
+
+            for (auto i = 0; i < n / 2; ++i) {
+                nt_seq.push_back(COMPLEMENT_NT[nt_seq[n / 2 - i - 1]]);
+            }
+            aa_seq = immulator::join_string(nt_seq.cbegin(), nt_seq.cend(), "");
+            is_productive = immulator::translate(aa_seq).find('*') == std::string::npos;
+        } while (!is_productive && ++attempts < MAX_ATTEMPTS);
+        return is_productive ? aa_seq : immulator::optional<std::string>();
+    }
+
+}
+
+
+
+template<typename Gen>
+std::string
+random_nts(std::string::size_type n, Gen &generator, const std::string &rem, bool productive) {
+    assert(rem.size() <= 2);
+    constexpr static char NTS[] = {'A', 'C', 'G', 'T'};
+
+    std::string nt_seq;
+
+    if (!productive) {
+        std::uniform_int_distribution<std::string::size_type> idist(0, 3);
+        for (auto i = 0; i < n; ++i) {
+            nt_seq += NTS[idist(generator)];
+        }
+    } else {
+        std::string current_codon = rem;
+        for (auto i = 0; i < n; ++i) {
+            auto allowed_nt = immulator::allowed_nts(current_codon);
+            std::uniform_int_distribution<std::string::size_type> idist(0, allowed_nt.size() - 1);
+            char nt = allowed_nt[idist(generator)];
+            nt_seq += nt;
+            current_codon += nt;
+            current_codon = current_codon.size() == 3 ? "" : current_codon;
+        }
+    }
+    return nt_seq;
+}
+
+
+
+
+
+
+
+
 
 

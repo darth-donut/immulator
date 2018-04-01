@@ -42,6 +42,9 @@ inline bool double_eq(double d1, double d2, double epsilon = 1e-5);
 inline void print_alignment(const std::string &string1, const std::string &string2, std::string::size_type start,
                             std::string::size_type end, double score, std::ostream &os = std::cout);
 
+inline std::string allowed_nts(const std::string &rem);
+
+
 std::string
 strip_string(const std::string &str, const std::string &delim) {
     std::string left_strip = str.substr(str.find_first_not_of(delim));
@@ -69,7 +72,7 @@ split_string(const std::string &str, const std::string &delim) {
     return collector;
 }
 
-/// warning: when using this function, it's doing touooer INPLACE, then returning the parameter itself
+/// warning: when using this function, it's doing toupper INPLACE, then returning the parameter itself
 /// \param str string
 /// \return str, convert to uppercase inplace
 std::string
@@ -84,7 +87,7 @@ toupper(const std::string &str) {
                            str.cend(),
                            std::string(""),
                            [](const std::string &acc, char c) -> std::string {
-                               return acc + std::string(1, std::toupper(c));
+                               return acc + static_cast<char>(std::toupper(c));
                            });
 }
 
@@ -94,6 +97,18 @@ join_string(const In &begin, const In &end, const std::string &delim) {
     return std::accumulate(begin, end, std::string(""), [&delim](auto &acc, auto &tok) {
         return acc + (acc.empty() ? "" : delim) + tok;
     });
+}
+
+std::string
+allowed_nts(const std::string &rem) {
+    // TAA TGA TAG -> stop codons
+    // the only nt we need to becareful of are TA and TG
+    // banned is a map of cautionary nucleotide sequences to "permitted" nucleotide suffix
+    // where permitted will not cause the translated sequence to contain a stop codon
+    static std::unordered_map<std::string, std::string> banned = {
+            {"TA", "CT"}, {"TG", "CGT"}
+    };
+    return banned.find(rem) == banned.end() ? "ACGT" : banned[rem];
 }
 
 std::string
