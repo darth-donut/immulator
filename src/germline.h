@@ -28,9 +28,14 @@ public:
     Germline(const std::string &name, const std::string &ascnum, const std::string &seq) :
             name_(name), ascnum_(ascnum), seq_(seq) {}
 
+
+    Germline(const std::string &nt_seq) {
+        seq_ += nt_seq;
+    }
+
     Germline &operator+=(const Germline &other) {
-        name_ += immulator::Germline::recombination_delim + other.name_;
-        ascnum_ += immulator::Germline::recombination_delim + other.ascnum_;
+        name_ += !other.name_.empty() ? immulator::Germline::recombination_delim + other.name_ : other.name_;
+        ascnum_ += !other.ascnum_.empty() ? immulator::Germline::recombination_delim + other.ascnum_ : other.ascnum_;
         seq_ += other.seq_;
         return *this;
     }
@@ -40,6 +45,13 @@ public:
     const char &operator[](size_type index) const { return seq_[index]; }
 
     operator std::string() const { return seq_; } // NOLINT
+
+    /// returns the "untranslated" part of this germline (if any) due to non-multiple of 3 length
+    /// \return std::string
+    std::string remainder() const {
+        auto rem = seq_.size() % 3;
+        return seq_.substr(seq_.size() - rem);
+    }
 
 public:
 

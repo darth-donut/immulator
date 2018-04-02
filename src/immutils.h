@@ -44,6 +44,9 @@ inline void print_alignment(const std::string &string1, const std::string &strin
 
 inline std::string allowed_nts(const std::string &rem);
 
+template<typename Gen>
+inline bool coin_flip(Gen &generator, double success_rate = 0.5);
+
 
 std::string
 strip_string(const std::string &str, const std::string &delim) {
@@ -109,6 +112,13 @@ allowed_nts(const std::string &rem) {
             {"TA", "CT"}, {"TG", "CGT"}
     };
     return banned.find(rem) == banned.end() ? "ACGT" : banned[rem];
+}
+
+template<typename Gen>
+bool
+coin_flip(Gen &generator, double success_rate) {
+    std::bernoulli_distribution bernoulli_trial(success_rate);
+    return bernoulli_trial(generator);
 }
 
 std::string

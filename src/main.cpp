@@ -26,7 +26,8 @@ dcutter(Germline dgerm, Gen &generator, const std::string &rem, bool check = tru
 
 template<typename Gen>
 immulator::optional<std::tuple<Germline, immulator::Germline::size_type, bool>>
-jcutter(Germline jgerm, Gen &generator, const std::string &rem, bool check = true, bool multiple = true);
+jcutter(Germline jgerm, Gen &generator, const std::string &rem,
+        std::string::size_type extras, bool check, bool multiple);
 
 template<typename Gen>
 immulator::optional<std::string>
@@ -38,7 +39,7 @@ random_nts(std::string::size_type n, Gen &generator, const std::string &rem, boo
 
 int
 main() {
-    constexpr int seqs = 1'000;
+    constexpr int seqs = 100;
     auto seed = std::random_device{}();
     std::cerr << "This simulation run is generated with seed " << seed << std::endl;
     std::mt19937 mersenne(seed);
@@ -87,28 +88,58 @@ vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &
     using size_type = immulator::Germline::size_type;
     static std::mt19937 mersenne(std::random_device{}());
     static constexpr std::size_t MAX_ATTEMPTS = 100'000;
-
     auto v = vcutter(vgerm, mersenne);
+    std::size_t attempts_insertion = 0;
+    Germline buffer;
 
     if (v) {
+        buffer = v->first;
         bool d_prod = false;
         Germline d;
         size_type dsize;
         // starts AFTER Cys (and convert to 1-index)
         size_type cdr3_start_pos = v->second + 3 + 1;
         std::size_t attempt_d = 0;
+        auto p1 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+        while (!p1 && prod && ++attempts_insertion < MAX_ATTEMPTS) {
+            p1 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+        }
+        buffer += *p1;
+        auto n1 = random_nts(rand() % 5, mersenne, buffer.remainder(), prod);
+        buffer += n1;
+        auto p2 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+        while (!p2 && prod && ++attempts_insertion < MAX_ATTEMPTS) {
+            p2 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+        }
+        buffer += *p2;
         do {
             std::tie(d, dsize, d_prod) = dcutter(dgerm,
                                                  mersenne,
-                                                 v->first.substr(v->first.size() - (v->first.size() % 3)),
+                                                 buffer.remainder(),
                                                  prod);
             ++attempt_d;
         } while (!d_prod && prod && attempt_d < MAX_ATTEMPTS);
-
+        buffer += d;
+        auto p3 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+        while (!p3 && prod && ++attempts_insertion < MAX_ATTEMPTS) {
+            p3 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+        }
+        buffer += *p3;
+        auto n2 = random_nts(rand() % 5, mersenne, buffer.remainder(), prod);
+        buffer += n2;
+        auto p4 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+        while (!p4 && prod && ++attempts_insertion < MAX_ATTEMPTS) {
+            p4 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+        }
+        buffer += *p4;
+        auto current_incomplete_cdr3_length = (v->first.size() - cdr3_start_pos + 1) + p1->size() + n1.size() + p2->size()
+                                              + d.size() + p3->size() + n2.size() + p4->size();
         Germline j;
-        size_type fwgxg_conserved_index;
         std::size_t attempt_j = 0;
-        auto jtry = jcutter(jgerm, mersenne, d.substr(d.size() - (v->first.size() + d.size()) % 3), prod, multiple);
+        size_type fwgxg_conserved_index;
+        auto jtry = jcutter(jgerm, mersenne, buffer.remainder(),
+                            (3 - (current_incomplete_cdr3_length % 3)) % 3,
+                            prod, multiple);
 
         if (jtry) {
             bool j_prod = false;
@@ -116,9 +147,10 @@ vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &
                 std::tie(j, fwgxg_conserved_index, j_prod) = *jtry;
                 ++attempt_j;
             } while (!j_prod && prod && attempt_j < MAX_ATTEMPTS);
-            size_type cdr3_end_pos = v->first.size() + d.size() + fwgxg_conserved_index;
+            size_type cdr3_end_pos = buffer.size() + fwgxg_conserved_index;
             std::cerr << "CDR3 start: " << cdr3_start_pos << " CDR3 END: " << cdr3_end_pos << std::endl;
-            return (v->first + d + j);
+            buffer += j;
+            return buffer;
         } else {
             // fail to find J gene anchor [FW]G.G region
             return {};
@@ -209,7 +241,9 @@ dcutter(Germline dgerm, Gen &generator, const std::string &rem, bool check) {
 
 template<typename Gen>
 immulator::optional<std::tuple<Germline, immulator::Germline::size_type, bool>>
-jcutter(Germline jgerm, Gen &generator, const std::string &rem, bool check, bool multiple) {
+jcutter(Germline jgerm, Gen &generator, const std::string &rem,
+        std::string::size_type extras, bool check, bool multiple) {
+    assert(extras >= 0 && extras <= 2 && "Extras is expected to be an integer between 0 and 2 inclusive");
     using size_type = immulator::Germline::size_type;
     constexpr std::size_t MAX_ATTEMPTS = 100'000;
 
@@ -367,11 +401,32 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem, bool check, bool
     std::uniform_int_distribution<size_type> front_idist(0, std::min(max_front_cut_size, start));
 
     auto front_cut = front_idist(generator);
+    // to maintain the V-J frame, FWGXG index - extras % 3 should be 0
+    auto offset =  (start - front_cut - extras) % 3;
+    auto offset_by = (3 - offset) % 3;
+    // if we can afford to trim the front or if we CAN'T extend the back, use the front
+    if (offset_by <= front_cut && (immulator::coin_flip(generator) || front_cut + offset > start)) {
+        front_cut -= offset_by;
+    } else {
+        front_cut += offset;
+    }
+
     if (check) {
         auto aa = immulator::translate(rem + jgerm.substr(front_cut));
         std::size_t attempt = 0;
         for (; attempt < MAX_ATTEMPTS && aa.find('*') != std::string::npos; ++attempt) {
             front_cut = front_idist(generator);
+            offset =  (start - front_cut - extras) % 3;
+            offset_by = (3 - offset) % 3;
+            // 50% chance of offsetting either from the front or back, but if adding the offset to the back will
+            // cause a trim on the conserved anchor position (start), then force offsetting to happen from the front
+            // if offsetting from the front will cause a negative index (offset > front_cut), use the back as offset
+            // regardless of whether or not we lose the conserved region
+            if (offset_by <= front_cut && (immulator::coin_flip(generator) || front_cut + offset > start)) {
+                front_cut -= offset_by;
+            } else {
+                front_cut += offset;
+            }
             aa = immulator::translate(rem + jgerm.substr(front_cut));
         }
         if (attempt == MAX_ATTEMPTS) {
@@ -379,7 +434,7 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem, bool check, bool
             productive = false;
         }
     }
-
+    assert(front_cut > start || (start - front_cut - extras) % 3 == 0);
     /* -------------------------------------------------------------------------------- *
      *                       Determine how to cut the front nt seqs                     *
      *                                                                                  *
@@ -394,8 +449,10 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem, bool check, bool
             back_cut += rem_nt;
         }
     }
-    assert(front_cut <= start);
-    return std::make_tuple(jgerm.trim(front_cut, jgerm.size() - back_cut - front_cut), start - front_cut, productive);
+    // when front_cut > start, it means we compensated V-J frame with additional cut INTO the conserved region,
+    // so naturally CDR3 starts as early as 0
+    return std::make_tuple(jgerm.trim(front_cut, jgerm.size() - back_cut - front_cut),
+                           front_cut <= start ? start - front_cut : 0, productive);
 }
 
 template<typename Gen>
