@@ -39,7 +39,7 @@ random_nts(std::string::size_type n, Gen &generator, const std::string &rem, boo
 
 int
 main() {
-    constexpr int seqs = 100;
+    constexpr int seqs = 200;
     auto seed = std::random_device{}();
     std::cerr << "This simulation run is generated with seed " << seed << std::endl;
     std::mt19937 mersenne(seed);
@@ -402,13 +402,19 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem,
 
     auto front_cut = front_idist(generator);
     // to maintain the V-J frame, FWGXG index - extras % 3 should be 0
-    auto offset =  (start - front_cut - extras) % 3;
-    auto offset_by = (3 - offset) % 3;
-    // if we can afford to trim the front or if we CAN'T extend the back, use the front
-    if (offset_by <= front_cut && (immulator::coin_flip(generator) || front_cut + offset > start)) {
-        front_cut -= offset_by;
+    if (front_cut < start) {
+        auto offset =  (start - front_cut - extras) % 3;
+        auto offset_by = (3 - offset) % 3;
+        // if we can afford to trim the front or if we CAN'T extend the back, use the front
+        if (offset_by <= front_cut && (immulator::coin_flip(generator) || front_cut + offset > start)) {
+            front_cut -= offset_by;
+        } else {
+            front_cut += offset;
+        }
     } else {
-        front_cut += offset;
+        assert(front_cut == start && extras <= start);
+        // scale back to allow extras to consume the "scaled" back nt
+        front_cut -= extras;
     }
 
     if (check) {
@@ -416,16 +422,21 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem,
         std::size_t attempt = 0;
         for (; attempt < MAX_ATTEMPTS && aa.find('*') != std::string::npos; ++attempt) {
             front_cut = front_idist(generator);
-            offset =  (start - front_cut - extras) % 3;
-            offset_by = (3 - offset) % 3;
-            // 50% chance of offsetting either from the front or back, but if adding the offset to the back will
-            // cause a trim on the conserved anchor position (start), then force offsetting to happen from the front
-            // if offsetting from the front will cause a negative index (offset > front_cut), use the back as offset
-            // regardless of whether or not we lose the conserved region
-            if (offset_by <= front_cut && (immulator::coin_flip(generator) || front_cut + offset > start)) {
-                front_cut -= offset_by;
+            if (front_cut < start) {
+                auto offset =  (start - front_cut - extras) % 3;
+                auto offset_by = (3 - offset) % 3;
+                // 50% chance of offsetting either from the front or back, but if adding the offset to the back will
+                // cause a trim on the conserved anchor position (start), then force offsetting to happen from the front
+                // if offsetting from the front will cause a negative index (offset > front_cut), use the back as offset
+                // regardless of whether or not we lose the conserved region
+                if (offset_by <= front_cut && (immulator::coin_flip(generator) || front_cut + offset > start)) {
+                    front_cut -= offset_by;
+                } else {
+                    front_cut += offset;
+                }
             } else {
-                front_cut += offset;
+                assert(front_cut == start && extras <= start);
+                front_cut -= extras;
             }
             aa = immulator::translate(rem + jgerm.substr(front_cut));
         }
