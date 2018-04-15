@@ -114,6 +114,6 @@ tags
 # Project related files
 *.cfg
 germ.txt
-vgerm.txt
-dgerm.txt
-jgerm.txt
+imgt_human_ighd
+imgt_human_ighj
+imgt_human_ighv

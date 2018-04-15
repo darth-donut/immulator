@@ -29,9 +29,11 @@ public:
             name_(name), ascnum_(ascnum), seq_(seq) {}
 
 
-    Germline(const std::string &nt_seq) {
-        seq_ += nt_seq;
+    Germline(const std::string &seq) {
+        seq_ += seq;
     }
+
+    Germline(const std::string &name, const std::string &seq) : name_(name), ascnum_(""), seq_(seq) {}
 
     Germline &operator+=(const Germline &other) {
         name_ += !other.name_.empty() ? immulator::Germline::recombination_delim + other.name_ : other.name_;

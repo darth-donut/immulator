@@ -27,7 +27,7 @@ dcutter(Germline dgerm, Gen &generator, const std::string &rem, bool check = tru
 template<typename Gen>
 immulator::optional<std::tuple<Germline, immulator::Germline::size_type, bool>>
 jcutter(Germline jgerm, Gen &generator, const std::string &rem,
-        std::string::size_type extras, bool check, bool multiple);
+        std::string::size_type extras, bool check);
 
 template<typename Gen>
 immulator::optional<std::string>
@@ -39,20 +39,20 @@ random_nts(std::string::size_type n, Gen &generator, const std::string &rem, boo
 
 int
 main() {
-    constexpr int seqs = 200;
+    constexpr int seqs = 2000;
     auto seed = std::random_device{}();
     std::cerr << "This simulation run is generated with seed " << seed << std::endl;
     std::mt19937 mersenne(seed);
 
     immulator::GermlineConfiguration gcfg("../germ.cfg", true);
     const string title(80, '=');
-    std::cout << title << '\n'
+    std::cerr << title << '\n'
               << "\t\t\tConfiguration file found\n" << title << '\n'
               << gcfg << std::endl;
 
-    immulator::GermlineFactory vgermlines("../vgerm.txt"/*, gcfg*/);
-    immulator::GermlineFactory dgermlines("../dgerm.txt"/*, gcfg*/);
-    immulator::GermlineFactory jgermlines("../jgerm.txt"/*, gcfg*/);
+    immulator::GermlineFactory vgermlines("../imgt_human_ighv"/*, gcfg*/);
+    immulator::GermlineFactory dgermlines("../imgt_human_ighd"/*, gcfg*/);
+    immulator::GermlineFactory jgermlines("../imgt_human_ighj"/*, gcfg*/);
 
     std::map<std::string, int> counter;
     for (int i = 0; i < seqs; i++) {
@@ -64,19 +64,19 @@ main() {
         do {
             recombined = vdj_recombination(vgermlines(mersenne), dgermlines(mersenne), jgermlines(mersenne));
         } while (!recombined);
-        std::cout << *recombined << std::endl;
+        std::cout << ">" << i << *recombined << std::endl;
     }
 
     // count germline distribution used
     double total = std::accumulate(counter.begin(), counter.end(), 0, [](auto val, auto &keypair) {
         return val + keypair.second;
     });
-    std::cout << title << '\n'
+    std::cerr << title << '\n'
               << "\t\t\tCalculating germline distribution ...\n"
               << title << std::endl;
 
     for (auto &i : counter) {
-        std::cout << i.first << "\t" << i.second / total << std::endl;
+        std::cerr << i.first << "\t" << i.second / total << std::endl;
     }
     return 0;
 }
@@ -91,6 +91,8 @@ vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &
     auto v = vcutter(vgerm, mersenne);
     std::size_t attempts_insertion = 0;
     Germline buffer;
+    std::uniform_int_distribution<std::string::size_type> palin_rand(0, 8);
+    std::uniform_int_distribution<std::string::size_type> ins_rand(0, 5);
 
     if (v) {
         buffer = v->first;
@@ -100,16 +102,16 @@ vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &
         // starts AFTER Cys (and convert to 1-index)
         size_type cdr3_start_pos = v->second + 3 + 1;
         std::size_t attempt_d = 0;
-        auto p1 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+        auto p1 = palindromic(palin_rand(mersenne), mersenne, buffer.remainder(), prod);
         while (!p1 && prod && ++attempts_insertion < MAX_ATTEMPTS) {
-            p1 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+            p1 = palindromic(palin_rand(mersenne), mersenne, buffer.remainder(), prod);
         }
         buffer += *p1;
-        auto n1 = random_nts(rand() % 5, mersenne, buffer.remainder(), prod);
+        auto n1 = random_nts(ins_rand(mersenne), mersenne, buffer.remainder(), prod);
         buffer += n1;
-        auto p2 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+        auto p2 = palindromic(palin_rand(mersenne), mersenne, buffer.remainder(), prod);
         while (!p2 && prod && ++attempts_insertion < MAX_ATTEMPTS) {
-            p2 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+            p2 = palindromic(palin_rand(mersenne), mersenne, buffer.remainder(), prod);
         }
         buffer += *p2;
         do {
@@ -120,16 +122,16 @@ vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &
             ++attempt_d;
         } while (!d_prod && prod && attempt_d < MAX_ATTEMPTS);
         buffer += d;
-        auto p3 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+        auto p3 = palindromic(palin_rand(mersenne), mersenne, buffer.remainder(), prod);
         while (!p3 && prod && ++attempts_insertion < MAX_ATTEMPTS) {
-            p3 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+            p3 = palindromic(palin_rand(mersenne), mersenne, buffer.remainder(), prod);
         }
         buffer += *p3;
-        auto n2 = random_nts(rand() % 5, mersenne, buffer.remainder(), prod);
+        auto n2 = random_nts(ins_rand(mersenne), mersenne, buffer.remainder(), prod);
         buffer += n2;
-        auto p4 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+        auto p4 = palindromic(palin_rand(mersenne), mersenne, buffer.remainder(), prod);
         while (!p4 && prod && ++attempts_insertion < MAX_ATTEMPTS) {
-            p4 = palindromic(rand() % 8, mersenne, buffer.remainder(), prod);
+            p4 = palindromic(ins_rand(mersenne), mersenne, buffer.remainder(), prod);
         }
         buffer += *p4;
         auto current_incomplete_cdr3_length = (v->first.size() - cdr3_start_pos + 1) + p1->size() + n1.size() + p2->size()
@@ -139,7 +141,7 @@ vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &
         size_type fwgxg_conserved_index;
         auto jtry = jcutter(jgerm, mersenne, buffer.remainder(),
                             (3 - (current_incomplete_cdr3_length % 3)) % 3,
-                            prod, multiple);
+                            prod);
 
         if (jtry) {
             bool j_prod = false;
@@ -150,6 +152,10 @@ vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &
             size_type cdr3_end_pos = buffer.size() + fwgxg_conserved_index;
             std::cerr << "CDR3 start: " << cdr3_start_pos << " CDR3 END: " << cdr3_end_pos << std::endl;
             buffer += j;
+            if (multiple && (buffer.size() % 3)) {
+                buffer.trim(0, buffer.size() - (buffer.size() % 3));
+                assert(buffer.size() % 3 == 0);
+            }
             return buffer;
         } else {
             // fail to find J gene anchor [FW]G.G region
@@ -242,7 +248,7 @@ dcutter(Germline dgerm, Gen &generator, const std::string &rem, bool check) {
 template<typename Gen>
 immulator::optional<std::tuple<Germline, immulator::Germline::size_type, bool>>
 jcutter(Germline jgerm, Gen &generator, const std::string &rem,
-        std::string::size_type extras, bool check, bool multiple) {
+        std::string::size_type extras, bool check) {
     assert(extras >= 0 && extras <= 2 && "Extras is expected to be an integer between 0 and 2 inclusive");
     using size_type = immulator::Germline::size_type;
     constexpr std::size_t MAX_ATTEMPTS = 100'000;
@@ -455,11 +461,6 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem,
     std::uniform_int_distribution<size_type> back_idist(0, max_back_cut_size);
 
     auto back_cut = back_idist(generator);
-    if (multiple) {
-        if (auto rem_nt = (jgerm.size() - front_cut + rem.size() - back_cut) % 3) {
-            back_cut += rem_nt;
-        }
-    }
     // when front_cut > start, it means we compensated V-J frame with additional cut INTO the conserved region,
     // so naturally CDR3 starts as early as 0
     return std::make_tuple(jgerm.trim(front_cut, jgerm.size() - back_cut - front_cut),

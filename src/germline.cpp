@@ -10,7 +10,7 @@
 namespace immulator {
 std::ostream
 &operator<<(std::ostream &os, const immulator::Germline &germ) {
-    return os << germ.ascnum_  << '\t' << germ.name_ << '\n' << germ.seq_;
+    return os << germ.ascnum_ << '|' << germ.name_ << '\n' << germ.seq_;
 }
 
 immulator::Germline
