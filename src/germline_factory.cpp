@@ -11,7 +11,7 @@ using immulator::Germline;
 
 
 void
-immulator::GermlineFactory::parse_file() {
+immulator::GermlineFactory::parse_file(bool allow_stops) {
     std::ifstream ifs(filename_);
     if (ifs) {
         std::string buffer;
@@ -35,7 +35,9 @@ immulator::GermlineFactory::parse_file() {
             while (std::getline(ifs, buffer) && buffer.find_first_of('>') != 0) {
                 seq += buffer;
             }
-            germline_collection_.emplace_back(gene_name, seq);
+            if (allow_stops || immulator::translate(seq).find('*') == std::string::npos) {
+                germline_collection_.emplace_back(gene_name, seq);
+            }
         }
     }
 }

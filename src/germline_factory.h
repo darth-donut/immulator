@@ -11,25 +11,31 @@
 #include "germline.h"
 #include "germline_configuration.h"
 
-namespace immulator{
+namespace immulator {
 
 class GermlineFactory {
 public:
-    GermlineFactory(const std::string &filename) :
+    GermlineFactory(const std::string &filename, bool allow_stop = true) :
             filename_(filename) {
-        parse_file();
+        parse_file(allow_stop);
     }
-    GermlineFactory(const std::string &filename, const immulator::GermlineConfiguration &gcfg) :
+
+    GermlineFactory(const std::string &filename, const immulator::GermlineConfiguration &gcfg,
+                    bool allow_stop = true) :
             filename_(filename), gcfg_(gcfg) {
-        parse_file();
+        parse_file(allow_stop);
     }
+
 
     template<typename T>
     immulator::Germline operator()(T &) const;
+
 private:
-    void parse_file();
+    void parse_file(bool allow_stop);
+
     template<typename T>
     immulator::Germline random_germline(T &) const;
+
 private:
     const std::string filename_;
     const immulator::GermlineConfiguration gcfg_;

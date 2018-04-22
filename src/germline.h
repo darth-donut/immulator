@@ -55,6 +55,12 @@ public:
         return seq_.substr(seq_.size() - rem);
     }
 
+    /// finds a stop codon in the sequence
+    /// \return bool. True if there's a stop codon in this sequence
+    bool has_stop_codon() const {
+        return immulator::translate(seq_).find("*") != std::string::npos;
+    }
+
 public:
 
     const std::string family_name() const {

@@ -50,9 +50,9 @@ main() {
               << "\t\t\tConfiguration file found\n" << title << '\n'
               << gcfg << std::endl;
 
-    immulator::GermlineFactory vgermlines("../imgt_human_ighv"/*, gcfg*/);
-    immulator::GermlineFactory dgermlines("../imgt_human_ighd"/*, gcfg*/);
-    immulator::GermlineFactory jgermlines("../imgt_human_ighj"/*, gcfg*/);
+    immulator::GermlineFactory vgermlines("../imgt_human_ighv"/*, gcfg*/, false);
+    immulator::GermlineFactory dgermlines("../imgt_human_ighd"/*, gcfg*/, false);
+    immulator::GermlineFactory jgermlines("../imgt_human_ighj"/*, gcfg*/, false);
 
     std::map<std::string, int> counter;
     for (int i = 0; i < seqs; i++) {
