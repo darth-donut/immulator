@@ -7,7 +7,10 @@
 #include <tuple>
 #include <regex>
 
+#include "cxxopts.hpp"
 #include "germline_factory.h"
+
+#define VERSION "Immulator v0.0.99"
 
 using std::string;
 using immulator::Germline;
@@ -37,48 +40,72 @@ template<typename Gen>
 std::string
 random_nts(std::string::size_type n, Gen &generator, const std::string &rem, bool productive = true);
 
+
 int
-main() {
-    constexpr int seqs = 2000;
+main(int argc, char *argv[]) {
     auto seed = std::random_device{}();
+    cxxopts::Options options(argv[0], "Immunoglobulin simulator - simulates V region antibody sequences.");
+    options.add_options()
+            ("n,num", "number of sequences to simulate", cxxopts::value<std::size_t>())
+            ("s,seed", "seed random generator; keep this between the range of"
+                       " 0 to 2^32", cxxopts::value<unsigned int>())
+            ("v,version", "print immulator version and exits")
+            ("h,help", "print this help message and exits")
+            ("g,germlinecfg", "tab separated germline configuration file; describes V-(D)-J germline "
+                            "distributions", cxxopts::value<std::string>())
+            ;
+    auto args = options.parse(argc, argv);
+    if (args.count("help")) {
+        std::cout << options.help() << std::endl;
+        exit(EXIT_SUCCESS);
+    }
+    if (args.count("version")) {
+        std::cout << VERSION << std::endl;
+        exit(EXIT_SUCCESS);
+    }
+    if (!args.count("num")) {
+        std::cout << options.help() << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    if (args.count("seed")) {
+        seed = args["seed"].as<unsigned int>();
+    }
+
     std::cerr << "This simulation run is generated with seed " << seed << std::endl;
     std::mt19937 mersenne(seed);
 
-    immulator::GermlineConfiguration gcfg("../germ.cfg", true);
-    const string title(80, '=');
-    std::cerr << title << '\n'
-              << "\t\t\tConfiguration file found\n" << title << '\n'
-              << gcfg << std::endl;
+    if (args.count("germlinecfg")) {
+        const std::size_t seqs = args["num"].as<std::size_t>();
+        immulator::GermlineConfiguration gcfg(args["germlinecfg"].as<std::string>(), true);
+        const string title(80, '=');
+        std::cerr << title << '\n'
+                  << "\t\t\tConfiguration file found\n" << title << '\n'
+                  << gcfg << std::endl;
+        immulator::GermlineFactory vgermlines("../imgt_human_ighv", gcfg, false);
+        immulator::GermlineFactory dgermlines("../imgt_human_ighd", gcfg, false);
+        immulator::GermlineFactory jgermlines("../imgt_human_ighj", gcfg, false);
+        for (auto i = 0; i < seqs; ++i) {
+            immulator::optional<Germline> recombined;
+            do {
+                recombined = vdj_recombination(vgermlines(mersenne), dgermlines(mersenne), jgermlines(mersenne));
+            } while (!recombined);
+            std::cout << ">" << i << *recombined << std::endl;
+        }
 
-    immulator::GermlineFactory vgermlines("../imgt_human_ighv"/*, gcfg*/, false);
-    immulator::GermlineFactory dgermlines("../imgt_human_ighd"/*, gcfg*/, false);
-    immulator::GermlineFactory jgermlines("../imgt_human_ighj"/*, gcfg*/, false);
-
-    std::map<std::string, int> counter;
-    for (int i = 0; i < seqs; i++) {
-        counter[vgermlines(mersenne).family_name()] += 1;
+    } else {
+        const std::size_t seqs = args["num"].as<std::size_t>();
+        immulator::GermlineFactory vgermlines("../imgt_human_ighv", false);
+        immulator::GermlineFactory dgermlines("../imgt_human_ighd", false);
+        immulator::GermlineFactory jgermlines("../imgt_human_ighj", false);
+        for (auto i = 0; i < seqs; ++i) {
+            immulator::optional<Germline> recombined;
+            do {
+                recombined = vdj_recombination(vgermlines(mersenne), dgermlines(mersenne), jgermlines(mersenne));
+            } while (!recombined);
+            std::cout << ">" << i << *recombined << std::endl;
+        }
     }
-
-    for (auto i = 0; i < seqs; ++i) {
-        immulator::optional<Germline> recombined;
-        do {
-            recombined = vdj_recombination(vgermlines(mersenne), dgermlines(mersenne), jgermlines(mersenne));
-        } while (!recombined);
-        std::cout << ">" << i << *recombined << std::endl;
-    }
-
-    // count germline distribution used
-    double total = std::accumulate(counter.begin(), counter.end(), 0, [](auto val, auto &keypair) {
-        return val + keypair.second;
-    });
-    std::cerr << title << '\n'
-              << "\t\t\tCalculating germline distribution ...\n"
-              << title << std::endl;
-
-    for (auto &i : counter) {
-        std::cerr << i.first << "\t" << i.second / total << std::endl;
-    }
-    return 0;
+    exit(EXIT_SUCCESS);
 }
 
 
@@ -566,13 +593,4 @@ random_nts(std::string::size_type n, Gen &generator, const std::string &rem, boo
     }
     return nt_seq;
 }
-
-
-
-
-
-
-
-
-
 
