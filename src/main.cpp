@@ -186,6 +186,11 @@ vcutter(Germline vgerm, Gen &generator) {
     } else {
         size_type nuc_index = cys * 3;
 
+        // V germlines are usually > 200 (actually, >250)
+        if (nuc_index < 200) {
+            return {};
+        }
+
         // remaining nucleotides that we can cut
         size_type nt_rem = vgerm.size() - (nuc_index + 3) - 1;
 
@@ -453,10 +458,10 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem,
     }
     assert(front_cut > start || (start - front_cut - extras) % 3 == 0);
     /* -------------------------------------------------------------------------------- *
-     *                       Determine how to cut the front nt seqs                     *
+     *                       Determine how to cut the back nt seqs                      *
      *                                                                                  *
      * -------------------------------------------------------------------------------- */
-    constexpr double BACK_CUT_PERC = 30.0 / 100;
+    constexpr double BACK_CUT_PERC = 0 / 100;
     auto max_back_cut_size = static_cast<size_type>(std::ceil(BACK_CUT_PERC * jgerm.size()));
     std::uniform_int_distribution<size_type> back_idist(0, max_back_cut_size);
 
