@@ -1,9 +1,9 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.4)
 project(immulator)
 set(EXE immulator)
 
 set(CMAKE_CXX_STANDARD 14)
-
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(${EXE}
         src/main.cpp

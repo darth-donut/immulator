@@ -6,6 +6,7 @@
 #include <cmath>
 #include <tuple>
 #include <regex>
+#include <fstream>
 
 #include "cxxopts.hpp"
 #include "germline_factory.h"
@@ -16,7 +17,7 @@ using std::string;
 using immulator::Germline;
 
 // Testing
-immulator::optional<Germline>
+std::tuple<immulator::optional<Germline>, immulator::Germline::size_type, immulator::Germline::size_type>
 vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &jgerm, bool prod = true,
                   bool multiple = true);
 
@@ -40,10 +41,15 @@ template<typename Gen>
 std::string
 random_nts(std::string::size_type n, Gen &generator, const std::string &rem, bool productive = true);
 
+void
+write_reference(std::ofstream &os, const std::string &name,
+        immulator::Germline::size_type cdr3_start,
+        immulator::Germline::size_type cdr3_end);
 
 int
 main(int argc, char *argv[]) {
     auto seed = std::random_device{}();
+    std::string reference_filename("immulator.csv");
     cxxopts::Options options(argv[0], "Immunoglobulin simulator - simulates V region antibody sequences.");
     options.add_options()
             ("n,num", "number of sequences to simulate", cxxopts::value<std::size_t>())
@@ -53,26 +59,32 @@ main(int argc, char *argv[]) {
             ("h,help", "print this help message and exits")
             ("g,germlinecfg", "tab separated germline configuration file; describes V-(D)-J germline "
                             "distributions", cxxopts::value<std::string>())
+            ("r,reference", "germline and CDR3 information will be saved in this file, defaults "
+                            "to immulator.csv", cxxopts::value<std::string>())
             ;
     auto args = options.parse(argc, argv);
     if (args.count("help")) {
         std::cout << options.help() << std::endl;
-        exit(EXIT_SUCCESS);
+        return (EXIT_SUCCESS);
     }
     if (args.count("version")) {
         std::cout << VERSION << std::endl;
-        exit(EXIT_SUCCESS);
+        return (EXIT_SUCCESS);
     }
     if (!args.count("num")) {
         std::cout << options.help() << std::endl;
-        exit(EXIT_FAILURE);
+        return (EXIT_FAILURE);
     }
     if (args.count("seed")) {
         seed = args["seed"].as<unsigned int>();
     }
+    if (args.count("reference")) {
+        reference_filename = args["referece"].as<std::string>();
+    }
 
     std::cerr << "This simulation run is generated with seed " << seed << std::endl;
     std::mt19937 mersenne(seed);
+    std::ofstream refos(reference_filename);
 
     if (args.count("germlinecfg")) {
         const std::size_t seqs = args["num"].as<std::size_t>();
@@ -86,10 +98,12 @@ main(int argc, char *argv[]) {
         immulator::GermlineFactory jgermlines("../imgt_human_ighj", gcfg, false);
         for (auto i = 0; i < seqs; ++i) {
             immulator::optional<Germline> recombined;
+            immulator::Germline::size_type cdr3_start, cdr3_end;
             do {
-                recombined = vdj_recombination(vgermlines(mersenne), dgermlines(mersenne), jgermlines(mersenne));
+                std::tie(recombined, cdr3_start, cdr3_end)= vdj_recombination(vgermlines(mersenne), dgermlines(mersenne), jgermlines(mersenne));
             } while (!recombined);
             std::cout << ">" << i << *recombined << std::endl;
+            write_reference(refos, recombined->name(), cdr3_start, cdr3_end);
         }
 
     } else {
@@ -99,18 +113,20 @@ main(int argc, char *argv[]) {
         immulator::GermlineFactory jgermlines("../imgt_human_ighj", false);
         for (auto i = 0; i < seqs; ++i) {
             immulator::optional<Germline> recombined;
+            immulator::Germline::size_type cdr3_start, cdr3_end;
             do {
-                recombined = vdj_recombination(vgermlines(mersenne), dgermlines(mersenne), jgermlines(mersenne));
+                std::tie(recombined, cdr3_start, cdr3_end)= vdj_recombination(vgermlines(mersenne), dgermlines(mersenne), jgermlines(mersenne));
             } while (!recombined);
             std::cout << ">" << i << *recombined << std::endl;
+            write_reference(refos, recombined->name(), cdr3_start, cdr3_end);
         }
     }
-    exit(EXIT_SUCCESS);
+    return (EXIT_SUCCESS);
 }
 
 
 // Testing
-immulator::optional<Germline>
+std::tuple<immulator::optional<Germline>, immulator::Germline::size_type, immulator::Germline::size_type>
 vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &jgerm, bool prod, bool multiple) {
     using size_type = immulator::Germline::size_type;
     static std::mt19937 mersenne(std::random_device{}());
@@ -172,18 +188,25 @@ vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &
 
         if (jtry) {
             bool j_prod = false;
-            do {
+            std::tie(j, fwgxg_conserved_index, j_prod) = *jtry;
+            while (!j_prod && prod && attempt_j++ < MAX_ATTEMPTS) {
+                jtry = jcutter(jgerm, mersenne,
+                               buffer.remainder(),
+                               (3 - (current_incomplete_cdr3_length % 3)) % 3,
+                               prod);
+                if (!jtry) {
+                    // fail to find J gene anchor - fail immediately
+                    return {};
+                }
                 std::tie(j, fwgxg_conserved_index, j_prod) = *jtry;
-                ++attempt_j;
-            } while (!j_prod && prod && attempt_j < MAX_ATTEMPTS);
+            }
             size_type cdr3_end_pos = buffer.size() + fwgxg_conserved_index;
-            std::cerr << "CDR3 start: " << cdr3_start_pos << " CDR3 END: " << cdr3_end_pos << std::endl;
             buffer += j;
             if (multiple && (buffer.size() % 3)) {
                 buffer.trim(0, buffer.size() - (buffer.size() % 3));
                 assert(buffer.size() % 3 == 0);
             }
-            return buffer;
+            return std::make_tuple(buffer, cdr3_start_pos, cdr3_end_pos);
         } else {
             // fail to find J gene anchor [FW]G.G region
             return {};
@@ -271,7 +294,7 @@ dcutter(Germline dgerm, Gen &generator, const std::string &rem, bool check) {
     std::uniform_int_distribution<size_type> back_idist(0, max_back_cut_size);
 
     // cut back of D gene by "back_cut" much
-    auto back_cut = front_idist(generator);
+    auto back_cut = back_idist(generator);
     return std::make_tuple(dgerm.trim(front_cut, dgerm.size() - back_cut - front_cut),
                            dgerm.size() - front_cut - back_cut,
                            productive);
@@ -566,7 +589,6 @@ palindromic(std::string::size_type n, Gen &generator, const std::string &rem, bo
 }
 
 
-
 template<typename Gen>
 std::string
 random_nts(std::string::size_type n, Gen &generator, const std::string &rem, bool productive) {
@@ -594,3 +616,16 @@ random_nts(std::string::size_type n, Gen &generator, const std::string &rem, boo
     return nt_seq;
 }
 
+
+void
+write_reference(std::ofstream &os, const std::string &name,
+        immulator::Germline::size_type cdr3_start,
+        immulator::Germline::size_type cdr3_end) {
+    static bool first_ = true;
+    if (first_) {
+        first_ = false;
+        // the header need only be written once (on the first call)
+        os << "Genes,CDR3.start,CDR3.end\n";
+    }
+    os << name << "," << cdr3_start << "," << cdr3_end << '\n';
+}
