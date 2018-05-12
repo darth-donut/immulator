@@ -57,7 +57,7 @@ main(int argc, char *argv[]) {
                        " 0 to 2^32", cxxopts::value<unsigned int>())
             ("v,version", "print immulator version and exits")
             ("h,help", "print this help message and exits")
-            ("g,germlinecfg", "tab separated germline configuration file; describes V-(D)-J germline "
+            ("g,germlinecfg", "comma separated germline configuration file; describes V-(D)-J germline "
                             "distributions", cxxopts::value<std::string>())
             ("r,reference", "germline and CDR3 information will be saved in this file, defaults "
                             "to immulator.csv", cxxopts::value<std::string>())
