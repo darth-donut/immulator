@@ -30,7 +30,7 @@ $ immulator -n 1000
 Generate 10,000 sequences and use provided configuration file to simulate the provided abundances of V-(D)-J germline abundances.
 
 ```bash
-$ immulator -n 1000 -g germ.cfg
+$ immulator -n 10000 -g germ.cfg
 ```
 where germ.cfg should have be a comma separated format as follows:
 
