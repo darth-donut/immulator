@@ -1,6 +1,6 @@
 # Immulator
 
-Homo Sapien immunoglobulin variable domain sequence simulator.
+Homo Sapiens immunoglobulin variable domain sequence simulator.
 
 # Dependencies
 
