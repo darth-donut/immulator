@@ -43,8 +43,8 @@ random_nts(std::string::size_type n, Gen &generator, const std::string &rem, boo
 
 void
 write_reference(std::ofstream &os, const std::string &name,
-        immulator::Germline::size_type cdr3_start,
-        immulator::Germline::size_type cdr3_end);
+                immulator::Germline::size_type cdr3_start,
+                immulator::Germline::size_type cdr3_end);
 
 int
 main(int argc, char *argv[]) {
@@ -58,10 +58,9 @@ main(int argc, char *argv[]) {
             ("v,version", "print immulator version and exits")
             ("h,help", "print this help message and exits")
             ("g,germlinecfg", "comma separated germline configuration file; describes V-(D)-J germline "
-                            "distributions", cxxopts::value<std::string>())
+                              "distributions", cxxopts::value<std::string>())
             ("r,reference", "germline and CDR3 information will be saved in this file, defaults "
-                            "to immulator.csv", cxxopts::value<std::string>())
-            ;
+                            "to immulator.csv", cxxopts::value<std::string>());
     auto args = options.parse(argc, argv);
     if (args.count("help")) {
         std::cout << options.help() << std::endl;
@@ -100,7 +99,9 @@ main(int argc, char *argv[]) {
             immulator::optional<Germline> recombined;
             immulator::Germline::size_type cdr3_start, cdr3_end;
             do {
-                std::tie(recombined, cdr3_start, cdr3_end)= vdj_recombination(vgermlines(mersenne), dgermlines(mersenne), jgermlines(mersenne));
+                std::tie(recombined, cdr3_start, cdr3_end) = vdj_recombination(vgermlines(mersenne),
+                                                                               dgermlines(mersenne),
+                                                                               jgermlines(mersenne));
             } while (!recombined);
             std::cout << ">" << i << *recombined << std::endl;
             write_reference(refos, recombined->name(), cdr3_start, cdr3_end);
@@ -115,7 +116,9 @@ main(int argc, char *argv[]) {
             immulator::optional<Germline> recombined;
             immulator::Germline::size_type cdr3_start, cdr3_end;
             do {
-                std::tie(recombined, cdr3_start, cdr3_end)= vdj_recombination(vgermlines(mersenne), dgermlines(mersenne), jgermlines(mersenne));
+                std::tie(recombined, cdr3_start, cdr3_end) = vdj_recombination(vgermlines(mersenne),
+                                                                               dgermlines(mersenne),
+                                                                               jgermlines(mersenne));
             } while (!recombined);
             std::cout << ">" << i << *recombined << std::endl;
             write_reference(refos, recombined->name(), cdr3_start, cdr3_end);
@@ -177,7 +180,8 @@ vdj_recombination(const Germline &vgerm, const Germline &dgerm, const Germline &
             p4 = palindromic(ins_rand(mersenne), mersenne, buffer.remainder(), prod);
         }
         buffer += *p4;
-        auto current_incomplete_cdr3_length = (v->first.size() - cdr3_start_pos + 1) + p1->size() + n1.size() + p2->size()
+        auto current_incomplete_cdr3_length = (v->first.size() - cdr3_start_pos + 1)
+                                              + p1->size() + n1.size() + p2->size()
                                               + d.size() + p3->size() + n2.size() + p4->size();
         Germline j;
         std::size_t attempt_j = 0;
@@ -464,7 +468,7 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem,
     auto front_cut = front_idist(generator);
     // to maintain the V-J frame, FWGXG index - extras % 3 should be 0
     if (front_cut < start) {
-        auto offset =  (start - front_cut - extras) % 3;
+        auto offset = (start - front_cut - extras) % 3;
         auto offset_by = (3 - offset) % 3;
         // if we can afford to trim the front or if we CAN'T extend the back, use the front
         if (offset_by <= front_cut && (immulator::coin_flip(generator) || front_cut + offset > start)) {
@@ -484,7 +488,7 @@ jcutter(Germline jgerm, Gen &generator, const std::string &rem,
         for (; attempt < MAX_ATTEMPTS && aa.find('*') != std::string::npos; ++attempt) {
             front_cut = front_idist(generator);
             if (front_cut < start) {
-                auto offset =  (start - front_cut - extras) % 3;
+                auto offset = (start - front_cut - extras) % 3;
                 auto offset_by = (3 - offset) % 3;
                 // 50% chance of offsetting either from the front or back, but if adding the offset to the back will
                 // cause a trim on the conserved anchor position (start), then force offsetting to happen from the front
@@ -529,7 +533,10 @@ palindromic(std::string::size_type n, Gen &generator, const std::string &rem, bo
     constexpr static char NTS[] = {'A', 'C', 'G', 'T'};
     constexpr static std::size_t MAX_ATTEMPTS = 100'000;
     static std::unordered_map<char, char> COMPLEMENT_NT = {
-            {'A', 'T'}, {'T', 'A'}, {'C', 'G'}, {'G', 'C'}
+            {'A', 'T'},
+            {'T', 'A'},
+            {'C', 'G'},
+            {'G', 'C'}
     };
     std::string nt_seq;
 
@@ -619,8 +626,8 @@ random_nts(std::string::size_type n, Gen &generator, const std::string &rem, boo
 
 void
 write_reference(std::ofstream &os, const std::string &name,
-        immulator::Germline::size_type cdr3_start,
-        immulator::Germline::size_type cdr3_end) {
+                immulator::Germline::size_type cdr3_start,
+                immulator::Germline::size_type cdr3_end) {
     static bool first_ = true;
     if (first_) {
         first_ = false;

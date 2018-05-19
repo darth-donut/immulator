@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <random>
 #include <unordered_map>
 #include <cctype>
 
@@ -105,7 +106,7 @@ join_string(const In &begin, const In &end, const std::string &delim) {
 std::string
 allowed_nts(const std::string &rem) {
     // TAA TGA TAG -> stop codons
-    // the only nt we need to becareful of are TA and TG
+    // the only nt we need to be careful of are TA and TG
     // banned is a map of cautionary nucleotide sequences to "permitted" nucleotide suffix
     // where permitted will not cause the translated sequence to contain a stop codon
     static std::unordered_map<std::string, std::string> banned = {
