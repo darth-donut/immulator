@@ -53,6 +53,8 @@ main(int argc, char *argv[]) {
     cxxopts::Options options(argv[0], "Immunoglobulin simulator - simulates V region antibody sequences.");
     options.add_options()
             ("n,num", "number of sequences to simulate", cxxopts::value<std::size_t>())
+            ("p,productive", "approx percentage of productive/functional sequences to simulate",
+             cxxopts::value<double>())
             ("s,seed", "seed random generator; keep this between the range of"
                        " 0 to 2^32", cxxopts::value<unsigned int>())
             ("v,version", "print immulator version and exits")
@@ -62,6 +64,8 @@ main(int argc, char *argv[]) {
             ("r,reference", "germline and CDR3 information will be saved in this file, defaults "
                             "to immulator.csv", cxxopts::value<std::string>());
     auto args = options.parse(argc, argv);
+    double prod_perc = .75;
+
     if (args.count("help")) {
         std::cout << options.help() << std::endl;
         return (EXIT_SUCCESS);
@@ -76,6 +80,9 @@ main(int argc, char *argv[]) {
     }
     if (args.count("seed")) {
         seed = args["seed"].as<unsigned int>();
+    }
+    if (args.count("productivity")) {
+        prod_perc = args["productivity"].as<double>() / 100;
     }
     if (args.count("reference")) {
         reference_filename = args["referece"].as<std::string>();
@@ -101,7 +108,9 @@ main(int argc, char *argv[]) {
             do {
                 std::tie(recombined, cdr3_start, cdr3_end) = vdj_recombination(vgermlines(mersenne),
                                                                                dgermlines(mersenne),
-                                                                               jgermlines(mersenne));
+                                                                               jgermlines(mersenne),
+                                                                               immulator::coin_flip(mersenne, prod_perc)
+                                                                               );
             } while (!recombined);
             std::cout << ">" << i << *recombined << std::endl;
             write_reference(refos, recombined->name(), cdr3_start, cdr3_end);

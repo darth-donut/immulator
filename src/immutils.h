@@ -12,6 +12,8 @@
 #include <random>
 #include <unordered_map>
 #include <cctype>
+#include <iostream>
+#include <algorithm>
 
 namespace immulator {
 inline std::string strip_string(const std::string &str, const std::string &delim);
