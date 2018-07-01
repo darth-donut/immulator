@@ -62,9 +62,13 @@ main(int argc, char *argv[]) {
             ("g,germlinecfg", "comma separated germline configuration file; describes V-(D)-J germline "
                               "distributions", cxxopts::value<std::string>())
             ("r,reference", "germline and CDR3 information will be saved in this file, defaults "
-                            "to immulator.csv", cxxopts::value<std::string>());
+                            "to immulator.csv", cxxopts::value<std::string>())
+            ("V,vdb", "path to V germline database (FASTA file)", cxxopts::value<std::string>())
+            ("D,ddb", "path to D germline database (FASTA file)", cxxopts::value<std::string>())
+            ("J,jdb", "path to J germline database (FASTA file)", cxxopts::value<std::string>());
     auto args = options.parse(argc, argv);
     double prod_perc = .75;
+    std::string vdb, ddb, jdb;
 
     if (args.count("help")) {
         std::cout << options.help() << std::endl;
@@ -81,13 +85,28 @@ main(int argc, char *argv[]) {
     if (args.count("seed")) {
         seed = args["seed"].as<unsigned int>();
     }
-    if (args.count("productivity")) {
-        prod_perc = args["productivity"].as<double>() / 100;
+    if (args.count("productive")) {
+        prod_perc = args["productive"].as<double>() / 100;
     }
     if (args.count("reference")) {
-        reference_filename = args["referece"].as<std::string>();
+        reference_filename = args["reference"].as<std::string>();
     }
-
+    std::unordered_map<char, std::string> database;
+    for (const char c : std::string("vdj")) {
+        auto key = std::string(1, c) + "db";
+        if (args.count(key)) {
+            database[c] = args[key].as<std::string>();
+            if (!immulator::exists(database[c])) {
+                std::cout << database[c] << " file not found. Aborting." << std::endl;
+                return(EXIT_FAILURE);
+            }
+        } else {
+            std::cout << "-" << static_cast<char>(std::toupper(c)) << " <path to "
+                      << static_cast<char>(std::toupper(c))
+                      << " germline FASTA file> is required" << std::endl;
+            return(EXIT_FAILURE);
+        }
+    }
     std::cerr << "This simulation run is generated with seed " << seed << std::endl;
     std::mt19937 mersenne(seed);
     std::ofstream refos(reference_filename);
@@ -99,9 +118,9 @@ main(int argc, char *argv[]) {
         std::cerr << title << '\n'
                   << "\t\t\tConfiguration file found\n" << title << '\n'
                   << gcfg << std::endl;
-        immulator::GermlineFactory vgermlines("../imgt_human_ighv", gcfg, false);
-        immulator::GermlineFactory dgermlines("../imgt_human_ighd", gcfg, false);
-        immulator::GermlineFactory jgermlines("../imgt_human_ighj", gcfg, false);
+        immulator::GermlineFactory vgermlines(database['v'], gcfg, false);
+        immulator::GermlineFactory dgermlines(database['d'], gcfg, false);
+        immulator::GermlineFactory jgermlines(database['j'], gcfg, false);
         for (auto i = 0; i < seqs; ++i) {
             immulator::optional<Germline> recombined;
             immulator::Germline::size_type cdr3_start, cdr3_end;
@@ -118,16 +137,18 @@ main(int argc, char *argv[]) {
 
     } else {
         const std::size_t seqs = args["num"].as<std::size_t>();
-        immulator::GermlineFactory vgermlines("../imgt_human_ighv", false);
-        immulator::GermlineFactory dgermlines("../imgt_human_ighd", false);
-        immulator::GermlineFactory jgermlines("../imgt_human_ighj", false);
+        immulator::GermlineFactory vgermlines(database['v'], false);
+        immulator::GermlineFactory dgermlines(database['d'], false);
+        immulator::GermlineFactory jgermlines(database['j'], false);
         for (auto i = 0; i < seqs; ++i) {
             immulator::optional<Germline> recombined;
             immulator::Germline::size_type cdr3_start, cdr3_end;
             do {
                 std::tie(recombined, cdr3_start, cdr3_end) = vdj_recombination(vgermlines(mersenne),
                                                                                dgermlines(mersenne),
-                                                                               jgermlines(mersenne));
+                                                                               jgermlines(mersenne),
+                                                                               immulator::coin_flip(mersenne, prod_perc)
+                                                                               );
             } while (!recombined);
             std::cout << ">" << i << *recombined << std::endl;
             write_reference(refos, recombined->name(), cdr3_start, cdr3_end);

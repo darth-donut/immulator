@@ -9,11 +9,13 @@
 
 #include <string>
 #include <vector>
+#include <numeric>
 #include <random>
 #include <unordered_map>
 #include <cctype>
 #include <iostream>
 #include <algorithm>
+#include <sys/stat.h>
 
 namespace immulator {
 inline std::string strip_string(const std::string &str, const std::string &delim);
@@ -50,6 +52,7 @@ inline std::string allowed_nts(const std::string &rem);
 template<typename Gen>
 inline bool coin_flip(Gen &generator, double success_rate = 0.5);
 
+inline bool exists(const std::string &filename);
 
 std::string
 strip_string(const std::string &str, const std::string &delim) {
@@ -352,6 +355,12 @@ print_alignment(const std::string &string1, const std::string &string2, std::str
        << string1 << '\n'
        << std::string(start, ' ') << std::string(end - start, '|') << '\n'
        << string2 << '\n';
+}
+
+bool
+exists(const std::string &filename) {
+    struct stat buffer;
+    return (stat(filename.c_str(), &buffer) == 0);
 }
 
 } // namespace immulator

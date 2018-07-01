@@ -24,13 +24,13 @@ $ make
 Basic usage, generate 1,000 sequences:
 
 ```bash
-$ immulator -n 1000
+$ immulator -n 1000 -V human_imgt_ighv -D human_imgt_ighd -J human_imgt_ighj
 ```
 
 Generate 10,000 sequences and use provided configuration file to simulate the provided abundances of V-(D)-J germline abundances.
 
 ```bash
-$ immulator -n 10000 -g germ.cfg
+$ immulator -n 10000 -g germ.cfg -V human_imgt_ighv -D human_imgt_ighd -J human_imgt_ighj
 ```
 where germ.cfg should have be a comma separated format as follows:
 
